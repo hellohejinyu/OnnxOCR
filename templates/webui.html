@@ -123,7 +123,7 @@ ocrForm.addEventListener('submit', async function(e) {
                 progressText.textContent = '正在识别文件...';
             }
         }, 300);
-        const resp = await fetch('/ocr', { method: 'POST', body: formData });
+        const resp = await fetch('proxy/orientation', { method: 'POST', body: formData });
         clearInterval(fakeTimer);
         progressBar.style.width = '100%';
         progressText.textContent = '识别完成';

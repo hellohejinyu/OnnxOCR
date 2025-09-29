@@ -23,6 +23,7 @@ app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB
 ocr_logic = OCRLogic(lambda msg: print(msg))
 # 独立 OCR 模型实例，避免影响 ocr_logic
 ocr_model_api = ONNXPaddleOcr(use_angle_cls=True, use_gpu=False)
+ocr_logic.set_model('PP-OCRv5')
 
 @app.route("/")
 def index():
@@ -130,6 +131,39 @@ def ocr_api():
         "processing_time": processing_time,
         "results": ocr_results
     })
+
+@app.route("/orientation", methods=["POST"])
+def orientation_formdata():
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "Invalid request, form-data 'file' is required."}), 400
+
+    try:
+        file_bytes = file.read()
+        image_np = np.frombuffer(file_bytes, dtype=np.uint8)
+        img = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
+        if img is None:
+            return jsonify({"error": "Failed to decode image from binary file."}), 400
+    except Exception as e:
+        return jsonify({"error": f"Image decoding failed: {str(e)}"}), 400
+
+    try:
+        cls_res = ocr_model_api.ocr(img, det=False, rec=False, cls=True)
+        direction = None
+        confidence = None
+        if isinstance(cls_res, list) and len(cls_res) > 0 and isinstance(cls_res[0], list) and len(cls_res[0]) > 0:
+            label, score = cls_res[0][0]
+            direction = str(label)
+            confidence = float(score)
+        else:
+            return jsonify({"error": "Orientation classification failed or returned empty result."}), 500
+
+        return jsonify({
+            "direction": direction,
+            "confidence": confidence
+        })
+    except Exception as e:
+        return jsonify({"error": f"Orientation classification error: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5005, debug=True)
