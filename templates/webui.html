@@ -103,7 +103,7 @@ ocrForm.addEventListener('submit', async function(e) {
     const startTime = Date.now();
     const formData = new FormData();
     for (const file of fileInput.files) {
-        formData.append('files', file);
+        formData.append('file', file);
     }
     formData.append('model_name', document.getElementById('modelSelect').value);
     // 保存所有图片文件的base名和File对象
